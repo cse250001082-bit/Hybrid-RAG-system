@@ -1,72 +1,186 @@
-# 📘 Student Document Assistant (SDA)
+# 📘 Student Document Assistant
 
-An advanced Retrieval-Augmented Generation (RAG) system engineered with a **Hybrid Search** core (Dense Vector + Lexical BM25) and local **FlashRank Re-ranking**. This application allows students to upload lecture notes, textbook chapters, or reference material and converse with their documents through a clean, conversational Streamlit UI.
+## Problem Statement
 
----
+Students often need to search through lengthy lecture notes, textbooks, and study materials to find specific information. Traditional keyword search fails to understand the meaning of queries and cannot handle conversational follow-up questions effectively.
 
-## 🚀 Key Architectural Features
-
-* **Dual-Engine Hybrid Search:** Combines semantic context lookup (**ChromaDB** with cosine distance) and keyword matching (**BM25 Retriever**) to capture both concepts and exact terms.
-* **Context Re-ranking:** Utilizes a local cross-encoder (`ms-marco-MiniLM-L-12-v2` via **FlashRank**) to filter and re-rank retrieved text pieces, ensuring high-density relevancy passes into the LLM.
-* **Conversational Memory with De-contextualization:** Injects an isolated Llama-3 step that rewrites user follow-ups into standalone queries based on prior chat logs before hitting the search databases.
-* **Production Ingestion Pipeline:** Splits incoming `.txt` or `.pdf` data natively, tracking source metadata footprints seamlessly.
-* **Inference Speed:** Powered by `llama-3.3-70b-versatile` hosted on **Groq** for high-velocity streaming token generation.
+This project develops an AI-powered Student Document Assistant using Retrieval-Augmented Generation (RAG). It combines semantic search, keyword search, reranking, and conversational memory to provide accurate answers directly from uploaded study materials.
 
 ---
 
-## 🛠️ System Architecture Flow
+## Features
 
-1. **Ingestion Layer:** Raw Documents (`docs/`) ➔ Character Splitting ➔ Vector Generation (`all-MiniLM-L6-v2`) ➔ ChromaDB & Serialized BM25 Storage.
-2. **Retrieval Layer:** Conversational Query Condensation ➔ Parallel Dense + Sparse Retrieval ➔ Deduplication Pool ➔ FlashRank Re-ranking.
-3. **Generation Layer:** Augmented Prompt Construction ➔ Groq Llama-3.3 Cloud Streaming ➔ Streamlit UI Rendering.
+- 📂 Upload multiple text or PDF study materials.
+- 🔍 Hybrid Retrieval using:
+  - Dense Vector Search (ChromaDB)
+  - Sparse Lexical Search (BM25)
+- ⚡ FlashRank reranking for highly relevant document retrieval.
+- 🧠 Conversational memory for follow-up questions.
+- 🤖 AI-generated responses using Groq's Llama-3.3-70B model.
+- 📊 Displays retrieval statistics and confidence scores.
+- 💾 Persistent vector database using ChromaDB.
+- 🌐 Interactive web interface built with Streamlit.
 
 ---
 
-## 📁 Repository Blueprint
+## Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| Python | Programming Language |
+| Streamlit | Web Interface |
+| LangChain | RAG Pipeline |
+| ChromaDB | Vector Database |
+| HuggingFace Embeddings | Text Embeddings |
+| BM25 Retriever | Keyword-based Retrieval |
+| FlashRank | Document Re-ranking |
+| Groq API | Large Language Model |
+| dotenv | Environment Variable Management |
+
+---
+
+## Project Architecture
+
+```
+                    User
+                      │
+                      ▼
+             Streamlit Interface
+                      │
+                      ▼
+            User Uploads Documents
+                      │
+                      ▼
+            Ingestion Pipeline
+      ┌─────────────────────────┐
+      │ Load Documents          │
+      │ Split into Chunks       │
+      │ Generate Embeddings     │
+      │ Store in ChromaDB       │
+      │ Save BM25 Index         │
+      └─────────────────────────┘
+                      │
+                      ▼
+               User Question
+                      │
+                      ▼
+         Chat History Condensation
+                      │
+                      ▼
+        Hybrid Retrieval (Dense + BM25)
+                      │
+                      ▼
+            FlashRank Re-ranking
+                      │
+                      ▼
+           Context-Augmented Prompt
+                      │
+                      ▼
+          Groq Llama-3.3-70B Model
+                      │
+                      ▼
+              AI Generated Answer
+```
+
+### Project Files
+
+- **final.py**
+  - Main Streamlit application
+  - Handles document upload
+  - User interface
+  - Chat interaction
+  - Hybrid retrieval pipeline
+
+- **ingestion_pipeline.py**
+  - Loads documents
+  - Splits text into chunks
+  - Generates embeddings
+  - Creates ChromaDB vector database
+  - Stores BM25 index
+
+- **retrieval_withmemory.py**
+  - Retrieves relevant documents
+  - Maintains conversation history
+  - Performs hybrid search
+  - Uses FlashRank reranking
+  - Generates AI responses
+
+---
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/your-username/student-document-assistant.git
+cd student-document-assistant
+```
+
+### 2. Create a virtual environment
+
+```bash
+python -m venv venv
+```
+
+Activate it:
+
+**Windows**
+
+```bash
+venv\Scripts\activate
+```
+
+**Linux / macOS**
+
+```bash
+source venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Create a `.env` file
 
 ```text
-├── db/                        # Local database persistence (Chroma & Pickle)
-│   ├── chroma_db/             # Vector database directory
-│   └── bm25_store.pkl         # Serialized keyword chunks
-├── docs/                      # Temporary storage for uploaded raw text/PDF assets
-├── ingestion_pipeline.py      # Independent data vectorization layer
-├── retrieval_withchatmemory.py# Terminal CLI application supporting stateful chat
-├── final.py                   # Production Streamlit UI Dashboard
-├── .env                       # Local secrets configuration file
-└── README.md                  # System documentation
-⚡ Quick Start
-1. Prerequisites & Environment Setup
-Clone this repository and ensure you have Python 3.9+ installed. Create your virtual environment and install the required distribution libraries:
+GROQ_API_KEY=your_api_key
+```
 
-Bash
-pip install streamlit langchain-chroma langchain-huggingface langchain-community langchain-groq flashrank python-dotenv
-2. Configure Credentials
-Create a .env file in the root directory and add your Groq API key:
+### 5. Run the application
 
-Code snippet
-GROQ_API_KEY=gsk_your_actual_groq_api_key_here
-3. Execution Options
-You can run this application through two different interfaces:
-
-Option A: Production Web Interface (Recommended)
-Launch the Streamlit web dashboard to upload files dynamically, view system health metrics, and trace pipeline validation live:
-
-Bash
+```bash
 streamlit run final.py
-Option B: Terminal Command Line Chat
-If you prefer testing inside your terminal with pre-existing files located inside the docs/ folder, execute the baseline ingestion pipeline followed by the chat engine:
+```
 
-Bash
-# 1. Parse documents first
-python ingestion_pipeline.py
+---
 
-# 2. Start the interactive terminal conversation loop
-python retrieval_withchatmemory.py
-🔍 Visual Verification Analytics
-The Streamlit UI includes an expandable Pipeline Verification Metrics drawer. When chatting with your documents, this lets you inspect:
+## Usage
 
-The optimized standalone variation of your question.
+1. Launch the Streamlit application.
+2. Upload one or more study documents.
+3. Click **Run Ingestion Pipeline**.
+4. Wait for the documents to be indexed.
+5. Ask questions related to the uploaded materials.
+6. The system:
+   - Retrieves relevant document chunks.
+   - Performs hybrid retrieval (Dense + BM25).
+   - Re-ranks results using FlashRank.
+   - Generates answers using the Groq LLM.
+7. Continue asking follow-up questions—the assistant remembers previous conversation context.
 
-FlashRank confidence scores indicating how strongly individual chunks relate to your query.
+---
 
-Metadata trails verifying exactly what source document or page section fed the answer.
+## Future Scope
+
+- Support additional document formats (DOCX, PPTX, CSV, HTML).
+- OCR support for scanned PDFs and handwritten notes.
+- Voice-based question answering.
+- Multi-user authentication and personalized document collections.
+- Cloud deployment using Docker and Kubernetes.
+- Citation generation with page references.
+- Integration with Learning Management Systems (LMS).
+- Support for multilingual document retrieval.
+- Advanced analytics and document summarization.
+- Real-time collaboration and shared knowledge bases.
